@@ -932,6 +932,46 @@ def resume_filename(name:str,role:str,company:str,extension:str):
     if company.strip(): pieces.append(clean(company))
     return "_".join([*pieces,"Resume",str(year)])+"."+extension
 
+def format_export_docx(document, text:str):
+    from docx.shared import Inches, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    section=document.sections[0]
+    section.top_margin=Inches(0.72)
+    section.bottom_margin=Inches(0.72)
+    section.left_margin=Inches(0.78)
+    section.right_margin=Inches(0.78)
+    styles=document.styles
+    styles["Normal"].font.name="Aptos"
+    styles["Normal"].font.size=Pt(10.5)
+    styles["Normal"].paragraph_format.space_after=Pt(4)
+    styles["Normal"].paragraph_format.line_spacing=1.08
+    lines=[line.strip() for line in text.splitlines()]
+    headings={"SUMMARY","PROFESSIONAL SUMMARY","EXPERIENCE","WORK EXPERIENCE","EMPLOYMENT",
+              "EDUCATION","SKILLS","PROJECTS","CERTIFICATIONS","ACHIEVEMENTS","VOLUNTEER","LANGUAGES"}
+    for index,line in enumerate(lines):
+        if not line:
+            continue
+        is_heading=line.upper() in headings
+        if index==0:
+            paragraph=document.add_paragraph()
+            paragraph.style=document.styles["Title"]
+            paragraph.alignment=WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.add_run(line)
+            paragraph.paragraph_format.space_after=Pt(8)
+        elif is_heading:
+            paragraph=document.add_paragraph(style="Heading 1")
+            paragraph.paragraph_format.keep_with_next=True
+            paragraph.paragraph_format.space_before=Pt(8)
+            paragraph.paragraph_format.space_after=Pt(4)
+            paragraph.add_run(line)
+        else:
+            paragraph=document.add_paragraph(style="Normal")
+            run=paragraph.add_run(line)
+            if line.startswith(("•","- ","* ")):
+                run.text=line.lstrip("•-* ").strip()
+                paragraph.style=document.styles["List Bullet"]
+            paragraph.paragraph_format.keep_together=True
+
 @app.get("/api/resume-reviews/{review_id}/export.docx")
 def export_review_docx(review_id:int):
     c=db()
@@ -941,7 +981,7 @@ def export_review_docx(review_id:int):
     if not row["finalized_at"]: raise HTTPException(409,"Review and save the resume changes before exporting")
     from docx import Document
     document=Document()
-    for line in row["final_resume"].splitlines(): document.add_paragraph(line)
+    format_export_docx(document,row["final_resume"])
     buffer=io.BytesIO(); document.save(buffer)
     profile=db()
     try: p=profile.execute("SELECT data_json FROM profile WHERE id=1").fetchone(); candidate=json.loads(p["data_json"]).get("name","") if p else ""
@@ -961,6 +1001,79 @@ def export_review_txt(review_id:int):
     finally: profile.close()
     filename=resume_filename(candidate,row["role"],row["company"],"txt")
     return Response(row["final_resume"],media_type="text/plain; charset=utf-8",headers={"Content-Disposition":f'attachment; filename="{filename}"',"Cache-Control":"no-store"})
+
+@app.get("/api/resume-reviews/{review_id}/export.pdf")
+def export_review_pdf(review_id:int):
+    c=db()
+    try:
+        row=c.execute("SELECT role,company,final_resume,finalized_at FROM resume_reviews WHERE id=?",(review_id,)).fetchone()
+    finally:
+        c.close()
+    if not row: raise HTTPException(404,"Resume review not found")
+    if not row["finalized_at"]: raise HTTPException(409,"Review and save the resume changes before exporting")
+    profile=db()
+    try:
+        p=profile.execute("SELECT data_json FROM profile WHERE id=1").fetchone()
+        candidate=json.loads(p["data_json"]).get("name","") if p else ""
+    finally:
+        profile.close()
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import LETTER
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+        font_name="CareerOSSans"
+        font_candidates=[
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        ]
+        font_path=next((path for path in font_candidates if Path(path).exists()),None)
+        if font_path:
+            pdfmetrics.registerFont(TTFont(font_name,font_path))
+            pdfmetrics.registerFontFamily(font_name,normal=font_name,bold=font_name,italic=font_name,boldItalic=font_name)
+        else:
+            font_name="Helvetica"
+        buffer=io.BytesIO()
+        document=SimpleDocTemplate(buffer,pagesize=LETTER,rightMargin=0.72*inch,leftMargin=0.72*inch,
+                                   topMargin=0.72*inch,bottomMargin=0.72*inch,
+                                   title="CareerOS Resume",author=candidate or "CareerOS Candidate")
+        styles=getSampleStyleSheet()
+        name_style=ParagraphStyle("CareerOSName",parent=styles["Title"],fontName=font_name,
+                                  fontSize=20,leading=24,alignment=TA_CENTER,textColor=colors.HexColor("#172033"),
+                                  spaceAfter=10)
+        heading_style=ParagraphStyle("CareerOSHeading",parent=styles["Heading2"],fontName=font_name,
+                                     fontSize=11,leading=14,textColor=colors.HexColor("#1f4b99"),
+                                     spaceBefore=8,spaceAfter=4,keepWithNext=True)
+        body_style=ParagraphStyle("CareerOSBody",parent=styles["BodyText"],fontName=font_name,
+                                  fontSize=10.5,leading=14,textColor=colors.HexColor("#20252f"),
+                                  spaceAfter=4,keepWithNext=False)
+        flowables=[]
+        headings={"SUMMARY","PROFESSIONAL SUMMARY","EXPERIENCE","WORK EXPERIENCE","EMPLOYMENT",
+                  "EDUCATION","SKILLS","PROJECTS","CERTIFICATIONS","ACHIEVEMENTS","VOLUNTEER","LANGUAGES"}
+        lines=[line.rstrip() for line in row["final_resume"].splitlines()]
+        for index,line in enumerate(lines):
+            stripped=line.strip()
+            if not stripped:
+                continue
+            escaped=stripped.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+            if index==0:
+                flowables.append(Paragraph(escaped,name_style))
+            elif stripped.upper() in headings:
+                flowables.append(Paragraph(escaped.upper(),heading_style))
+            elif stripped.startswith(("•","- ","* ")):
+                flowables.append(Paragraph("&#8226; "+escaped.lstrip("•-* ").strip(),body_style))
+            else:
+                flowables.append(Paragraph(escaped,body_style))
+        document.build(flowables)
+        filename=resume_filename(candidate,row["role"],row["company"],"pdf")
+        return Response(buffer.getvalue(),media_type="application/pdf",
+                        headers={"Content-Disposition":f'attachment; filename="{filename}"',"Cache-Control":"no-store"})
+    except (ImportError, RuntimeError, OSError, ValueError) as exc:
+        raise HTTPException(500,"PDF export could not be generated. Try DOCX or TXT export.") from exc
 
 @app.put("/api/resume-reviews/{review_id}")
 def update_resume_review(review_id:int,payload:ResumeReviewUpdatePayload):
@@ -1140,6 +1253,8 @@ def ask_ai(system:str,user:str):
     try:
         with urllib.request.urlopen(req,timeout=45) as r: out=json.loads(r.read())
         content=out["choices"][0]["message"]["content"]
+        if not isinstance(content,str) or not content.strip():
+            raise HTTPException(502,"The AI provider returned an empty response. Retry the request.")
         try: return json.loads(re.sub(r"^```(?:json)?|```$","",content.strip(),flags=re.M).strip())
         except: return content
     except urllib.error.HTTPError as e:

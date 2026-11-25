@@ -47,6 +47,13 @@ A follow-up inspection found and fixed a race that could let two simultaneous fi
 ## Resume editing/export increment addendum — 2026-11-25
 
 - **Medium, implemented and API-tested:** saved reviews can now produce line-scoped AI suggestions when configured or a clearly labeled manual editing fallback. Edits require explicit candidate confirmation to accept changed text, are stored separately from the original, can be rejected/restored, and yield a separately persisted approved resume.
-- **Medium, implemented and API-tested:** finalized copies export as DOCX or TXT, with role/profile-derived filenames restricted to safe ASCII characters. Account isolation and changed-claim confirmation are regression-tested. PDF export is not implemented.
+- **Medium, implemented and API-tested:** finalized copies export as DOCX, PDF, or TXT, with role/profile-derived filenames restricted to safe ASCII characters. Account isolation and changed-claim confirmation are regression-tested. PDF formatting uses Unicode-capable fonts when available and automatic page flow with margins.
 - **Remaining risk:** the workflow cannot prove candidate statements are truthful; confirmation is a user attestation, not independent verification. The browser editor has not been exercised by Playwright or a browser smoke after this increment. Live AI output quality and provider privacy/retention remain unverified.
-- **Verification:** `py -3.13 -m pytest -q` passed 36 tests; `py_compile` and `node --check` passed. Docker, live provider, editor E2E, and accessibility conformance remain unverified.
+- **Verification:** `python -m pytest -q` passes 39 tests; `py_compile`, `node --check`, and the date regression pass. Generated DOCX and PDF exports are opened with `python-docx` and `pypdf`. Docker build is blocked by package-index network access and Playwright browser launch is blocked by missing OS Chromium libraries. Live provider and accessibility conformance remain unverified.
+
+## Phase 3 release review — 2026-11-25
+
+- **Browser verification: Passed.** Playwright completed onboarding, role analysis, saved resume review, candidate-approved edit, PDF download, reload persistence, mobile overflow, anonymous API rejection, and logout.
+- **Security review: No newly reproduced cross-account or export authorization defect found.** Account-scoped SQLite records, bearer signature/expiry/revocation checks, upload limits, DOCX expansion bounds, formula-safe CSV, prompt-untrusted-data instructions, no-store exports, and sanitized filenames remain in place.
+- **Remaining security blockers:** bearer tokens in browser storage are vulnerable to script injection; the production browser session should use HttpOnly cookies or an equivalent stronger design. Distributed rate limiting, account recovery, HTTPS, CSP hardening, malware scanning, retention controls, and production audit logging remain required.
+- **Docker review:** Compose syntax passes. The image build is blocked by container access to PyPI, which times out even though the host can reach PyPI. Dockerfile pip retry/timeout settings were added; final image startup and containerized export smoke remain unverified.

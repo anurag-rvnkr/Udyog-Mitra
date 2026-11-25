@@ -70,6 +70,7 @@ Do not mark a phase complete without implementation and verification evidence.
 5. **Frontend QA:** add a reproducible automated Playwright suite for onboarding, tracker, evidence graph, interview coach/real modes, recovery, keyboard access, and responsive behavior.
 6. **Product loop:** connect application/interview outcomes to evidence and provide explainable recurring-gap recommendations; add persisted Skill-to-Proof Sprints with proof-to-evidence conversion.
 7. **Resume completion:** detailed section-by-section coaching, PDF export, valid PDF/DOCX parser fixtures, live AI quality checks, and browser E2E for the editor remain. DOCX/TXT export and candidate-approved tailored-copy persistence are implemented.
+8. PDF export, professional DOCX formatting, actual DOCX/PDF parser/export fixtures, and a Playwright resume-workflow specification were added in the 2026-11-25 reliability pass. Live browser execution requires OS browser libraries; Docker image build requires reachable package indexes.
 8. **Schema coverage:** add strict schemas to all remaining JSON endpoints and apply consistent maximum field lengths.
 
 The exact tests and their results are recorded in [TESTING_REPORT.md](./TESTING_REPORT.md); code review findings and severity are recorded in [CODE_REVIEW.md](./CODE_REVIEW.md).

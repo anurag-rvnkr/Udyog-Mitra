@@ -4,13 +4,15 @@ Latest verification: 2026-11-25. Includes persisted resume evidence decisions an
 
 ## Automated checks executed
 
-- `py -3.13 -m pytest -q`: **36 passed**, one upstream `python_multipart`/Starlette pending-deprecation warning (49.81 seconds).
-- `py -3.13 -m py_compile app.py`: passed after resume edit/export API changes.
-- `node --check app.js`: passed after resume edit/export UI changes.
-- `node tests/test_frontend_date.js`: passed local-date/UTC-boundary regression.
-- Focused resume review/edit run: **2 passed, 34 deselected** after the final resume API/UI changes.
-- `docker compose config` and image build: not run successfully; Docker is not installed.
-- No packaged frontend unit/E2E suite is present. The outcome-intelligence test verifies application-stage aggregation, evidence-gap aggregation, repeated coaching-gap aggregation, and account isolation.
+- `python -m pytest -q`: **39 passed**, one Starlette/TestClient pending-deprecation warning (10.76 seconds).
+- `python -m py_compile app.py`: passed.
+- `node --check app.js`: passed.
+- `node tests/test_frontend_date.js`: passed.
+- Playwright package and Chromium installed; browser execution blocked by missing OS library `libatk-1.0.so.0`.
+- `docker compose config`: passed with a temporary `.env` copied from placeholders.
+- `docker compose build`: failed twice at `pip install -r requirements.txt` because the Docker build network could not reach PyPI; no image or container startup claim.
+- Final retry with Dockerfile pip timeout/retry settings: build reached the dependency-install step but was stopped after repeated SSL EOF/timeouts fetching `/simple/fastapi/` inside the container. Host HTTPS to PyPI succeeds, confirming an environment/container-network limitation.
+- `npm run test:e2e`: **2 passed** in Chromium. One test covers onboarding, analysis, saved review, approved edit, PDF export download, reload persistence, and mobile overflow; one covers anonymous API rejection and logout.
 
 Independent security regressions added: simultaneous legacy-database adoption, bounded DOCX ZIP expansion, strict YYYY-MM-DD validation, VT/FF-prefixed CSV cells, candidate confirmation before accepting changed resume statements, safe DOCX/TXT export and resume edit account isolation. The API tests cover authentication/revocation, onboarding gate/draft persistence/legacy profile backfill, strict auth/application/review request schemas, body and password limits, throttle memory bounds, cross-account isolation, application CRUD and formula-safe CSV, profile/evidence/portfolio/role-map/resume-review data, resume TXT extraction and invalid PDF rejection, AI fallback/provider errors (timeout, rate-limit and malformed response), AI claim evidence downgrade, exactly 25 generated questions, checkpoint/report persistence and migration, primary-versus-follow-up accounting, API documentation visibility, and release ignore patterns. AI output tests use mocks where specified and do not demonstrate live provider behavior. Resume DOCX export was exercised through the API regression test; the new interactive editor has not had a browser E2E run yet.
 

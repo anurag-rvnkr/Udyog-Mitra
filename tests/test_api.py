@@ -282,7 +282,9 @@ def test_resume_docx_upload_extracts_unicode_sections_and_table_rows(tmp_path,mo
     assert response.status_code==200, response.text
     text=response.json()['text']
     assert 'Anaïs Candidate' in text and 'Experience' in text and 'Education' in text
-    assert 'SQL analysis\tEVIDENCE' in text and 'Validated data quality' in text and 'BSc Computer Science — 2026' in text
+    assert 'PROJECT\tEVIDENCE' in text
+    assert 'SQL analysis\tValidated data quality' in text
+    assert 'BSc Computer Science — 2026' in text
 
 
 def test_resume_selectable_pdf_unusual_layout_and_error_fixtures(tmp_path,monkeypatch):
@@ -558,7 +560,8 @@ def test_resume_review_persistence_decisions_validation_and_isolation(tmp_path,m
     assert client.put(f'/api/resume-reviews/{review_id}/edits',json=pending).status_code==400
     approved={'edits':[{'edit_id':edit['edit_id'],'proposed_text':proposed,'decision':'accept','candidate_confirmed':True}]}
     final=client.put(f'/api/resume-reviews/{review_id}/edits',json=approved)
-    assert final.status_code==200 and final.json()['final_resume']==proposed
+    approved_resume=payload['resume'].replace('Built a SQL project using Python',proposed)
+    assert final.status_code==200 and final.json()['final_resume']==approved_resume
     assert client.get(f'/api/resume-reviews/{review_id}').json()['resume']==payload['resume']
     docx=client.get(f'/api/resume-reviews/{review_id}/export.docx')
     assert docx.status_code==200 and docx.content[:2]==b'PK' and 'Test_Candidate_Analyst_Example_Co_Resume_' in docx.headers['content-disposition']
@@ -566,7 +569,14 @@ def test_resume_review_persistence_decisions_validation_and_isolation(tmp_path,m
     opened=Document(io.BytesIO(docx.content)); exported_text='\n'.join(p.text for p in opened.paragraphs)
     assert proposed in exported_text and 'EXPERIENCE' in exported_text and 'café inventory' in exported_text and 'BSc Data Science' in exported_text
     txt=client.get(f'/api/resume-reviews/{review_id}/export.txt')
-    assert txt.status_code==200 and txt.text==proposed
+    assert txt.status_code==200 and txt.text==approved_resume
+    pdf=client.get(f'/api/resume-reviews/{review_id}/export.pdf')
+    assert pdf.status_code==200 and pdf.content.startswith(b'%PDF') and pdf.headers['content-type']=='application/pdf'
+    assert 'Test_Candidate_Analyst_Example_Co_Resume_' in pdf.headers['content-disposition']
+    from pypdf import PdfReader
+    pdf_reader=PdfReader(io.BytesIO(pdf.content))
+    pdf_text="\n".join(page.extract_text() or "" for page in pdf_reader.pages)
+    assert proposed in pdf_text and 'EXPERIENCE' in pdf_text and 'café inventory' in pdf_text
     decision={'item_id':'req-0','decision':'confirm','edited_text':'I can demonstrate this with my SQL project.','candidate_confirmed':True}
     updated=client.put(f'/api/resume-reviews/{review_id}',json={'decisions':[decision]})
     assert updated.status_code==200 and updated.json()['decisions'][0]['candidate_confirmed'] is True

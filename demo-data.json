@@ -1,0 +1,20 @@
+{
+  "profile": {
+    "name": "Alex Morgan",
+    "career_stage": "Early career",
+    "education": "BSc Computer Science",
+    "graduation_year": "2026",
+    "target_roles": "QA Engineer, Data Analyst",
+    "skills": "Python, SQL, test automation, reporting",
+    "location": "Remote",
+    "work_mode": "Remote",
+    "project_descriptions": "Built a fictional inventory dashboard that used SQL validation rules and Python reports.",
+    "experience": "Completed a fictional internship in software quality assurance with manual test design and defect reporting.",
+    "certifications": "Not applicable",
+    "achievements": "Not applicable"
+  },
+  "job_description": "QA Engineer role requiring Python or JavaScript test automation, SQL data validation, clear defect reporting, collaboration with developers, and written test plans.",
+  "resume": "ALEX MORGAN\nSUMMARY\nEarly-career QA candidate with SQL, Python, and reporting experience.\nEXPERIENCE\nFictional Software Quality Internship\n- Designed test cases and documented defects.\n- Used SQL to validate sample inventory records.\nPROJECTS\nInventory Dashboard\n- Built a fictional reporting workflow with Python and SQL.\n- Added validation checks for missing and duplicate records.\nEDUCATION\nBSc Computer Science — 2026\nSKILLS\nPython, SQL, test automation, reporting",
+  "outreach": "Hello Riley,\n\nI am interested in the QA Engineer role and have practical experience creating test cases, validating SQL data, and documenting defects in a fictional dashboard project. Could you share the next step in the hiring process?\n\nThank you,\nAlex Morgan",
+  "interview_context": "The candidate is fictional. Do not claim employment, certifications, metrics, or outcomes beyond the supplied demo data."
+}

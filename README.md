@@ -74,6 +74,35 @@ py -3.13 -m py_compile app.py
 node --check app.js
 ```
 
+For the reproducible browser demo:
+
+```bash
+npm install
+npx playwright install chromium
+npx playwright install-deps chromium
+# Start CareerOS in another terminal on port 8003
+CAREEROS_DATA_DIR=/tmp/careeros-e2e CAREEROS_SECRET_KEY=local-only-e2e-secret python -m uvicorn app:app --host 127.0.0.1 --port 8003
+npm run test:e2e
+```
+
+On Windows, use PowerShell and `python -m uvicorn app:app --host 127.0.0.1 --port 8003` with separate environment variables. Keep the demo server running in one terminal and run `npm run test:e2e` in another.
+
+## Demo setup
+
+Use [demo-data.json](./demo-data.json) only as fictional demonstration text. It contains no real person or employer information.
+
+1. Start CareerOS locally and register a fresh demo account.
+2. Paste the profile values and complete onboarding.
+3. Paste the fictional resume text into Role Intelligence.
+4. Paste the fictional job description and run local analysis.
+5. Save and reopen the resume review.
+6. Generate suggestions, edit one line, confirm factual accuracy, save, and export PDF/DOCX/TXT.
+7. Generate the recruiter outreach draft and an interview question bank.
+8. Start turn-based interview practice, answer or skip questions, then open the report/history.
+9. Sign out and confirm protected APIs require a new authenticated session.
+
+Live AI, live voice, and public job feeds require external credentials/network access. Without `AI_API_KEY`, CareerOS uses clearly labeled local heuristics and templates.
+
 API docs are disabled by default. Set `CAREEROS_ENABLE_API_DOCS=1` only in a trusted development environment to expose Swagger/OpenAPI routes.
 
 The current automated suite covers authentication and account isolation, application/profile/evidence/portfolio/role-map CRUD and validation, resume upload rejection and TXT parsing, local analysis and provider errors, interview question count and report persistence, draft types, and response headers. The independent audit records the latest test run and limitations in [QA_SECURITY_AUDIT.md](./QA_SECURITY_AUDIT.md). Live provider WebRTC, live AI output, public job feeds, deployment, browser microphone permissions, and backup recovery still require configured external services or infrastructure.
